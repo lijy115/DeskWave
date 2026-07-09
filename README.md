@@ -52,10 +52,10 @@ The PC does not need external speakers. A headset, Bluetooth headphones, monitor
 
 ## Installation
 
-Clone the repository:
+Clone this repository:
 
 ```powershell
-git clone https://github.com/lijy115/DeskWave.git
+git clone <repository-url>
 cd DeskWave
 ```
 
@@ -80,11 +80,11 @@ Start the server:
 python server.py
 ```
 
-The terminal will print two URLs:
+The terminal will print two local network URLs:
 
 ```text
-Computer: http://127.0.0.1:8765
-Phone:    http://192.168.x.x:8765
+Computer: http://<local-host>:<port>
+Phone:    http://<pc-lan-ip>:<port>
 ```
 
 Open the `Phone` URL on your phone browser. Put the phone in landscape mode and place it under your monitor.
@@ -107,15 +107,15 @@ For a GitHub README, use a wide landscape screenshot from your phone or desktop 
 
 - Make sure the phone and PC are on the same Wi-Fi.
 - Allow Python through Windows Firewall when prompted.
-- Try the PC page first: `http://127.0.0.1:8765`.
+- Try the `Computer` URL printed by the server first.
 - Some guest, school, or office Wi-Fi networks block device-to-device access.
 
 ### The page opens, but there is no spectrum
 
-Open this on the PC:
+Open the health endpoint on the PC:
 
 ```text
-http://127.0.0.1:8765/health
+<Computer URL>/health
 ```
 
 Check the `status` field:
@@ -128,22 +128,26 @@ Check the `status` field:
 Force-refresh the page or add a version query:
 
 ```text
-http://192.168.x.x:8765/?v=2
+<Phone URL>/?v=2
 ```
 
-### Port 8765 is already in use
+### The default port is already in use
 
 Edit `server.py`:
 
 ```python
-PORT = 8765
+PORT = <default-port>
 ```
 
-Change it to another port, for example:
+Change it to another available port:
 
 ```python
-PORT = 8877
+PORT = <another-port>
 ```
+
+## Privacy Notes
+
+DeskWave runs locally on your own network. The printed addresses are local-only endpoints used by your phone and PC to talk to each other. Do not expose the server directly to the public internet.
 
 ## Project Structure
 
