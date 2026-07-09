@@ -55,8 +55,8 @@ The PC does not need external speakers. A headset, Bluetooth headphones, monitor
 Clone the repository:
 
 ```powershell
-git clone https://github.com/your-name/deskwave.git
-cd deskwave
+git clone https://github.com/lijy115/DeskWave.git
+cd DeskWave
 ```
 
 Install dependencies:
@@ -65,10 +65,11 @@ Install dependencies:
 python -m pip install -r requirements.txt
 ```
 
-If you use a specific Conda environment, run it with that Python:
+If you use Conda or another virtual environment, activate it first, then install the requirements:
 
 ```powershell
-& 'C:\Tools\anaconda3\envs\pytorch\python.exe' -m pip install -r requirements.txt
+conda activate your-env-name
+python -m pip install -r requirements.txt
 ```
 
 ## Usage
@@ -77,12 +78,6 @@ Start the server:
 
 ```powershell
 python server.py
-```
-
-Or with your Conda Python:
-
-```powershell
-& 'C:\Tools\anaconda3\envs\pytorch\python.exe' server.py
 ```
 
 The terminal will print two URLs:
@@ -154,12 +149,12 @@ PORT = 8877
 
 ```text
 .
-├── server.py
-├── requirements.txt
-├── screenshots/
-│   └── .gitkeep
-├── LICENSE
-└── README.md
+|-- server.py
+|-- requirements.txt
+|-- screenshots/
+|   `-- .gitkeep
+|-- LICENSE
+`-- README.md
 ```
 
 ## License
