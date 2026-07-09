@@ -1,5 +1,8 @@
 import json
+import ipaddress
+import re
 import socket
+import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -342,12 +345,127 @@ INDEX_HTML = r"""<!doctype html>
 
 
 def local_ip():
+    blocked_adapter_words = (
+        "mihomo",
+        "clash",
+        "verge",
+        "tun",
+        "tap",
+        "vpn",
+        "vmware",
+        "virtualbox",
+        "hyper-v",
+        "wsl",
+        "docker",
+        "zerotier",
+        "tailscale",
+        "wireguard",
+    )
+
+    def usable_lan_ip(ip):
+        try:
+            address = ipaddress.ip_address(ip)
+        except ValueError:
+            return False
+        if address.is_loopback or address.is_link_local or address.is_multicast:
+            return False
+        if address in ipaddress.ip_network("198.18.0.0/15"):
+            return False
+        return address.is_private
+
+    def score_candidate(adapter_name, ip, has_gateway):
+        name = adapter_name.lower()
+        if any(word in name for word in blocked_adapter_words):
+            return -100
+
+        score = 0
+        if has_gateway:
+            score += 50
+        else:
+            score -= 20
+
+        if ip.startswith("192.168."):
+            score += 30
+        elif ip.startswith("10."):
+            score += 20
+        else:
+            try:
+                address = ipaddress.ip_address(ip)
+                if address in ipaddress.ip_network("172.16.0.0/12"):
+                    score += 20
+            except ValueError:
+                pass
+        return score
+
+    try:
+        output = subprocess.check_output(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                (
+                    "Get-NetIPConfiguration | "
+                    "Where-Object { $_.IPv4Address -and $_.IPv4DefaultGateway } | "
+                    "ForEach-Object { "
+                    "'{0}|{1}' -f $_.InterfaceAlias, $_.IPv4Address.IPAddress "
+                    "}"
+                ),
+            ],
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+        )
+        candidates = []
+        for line in output.splitlines():
+            if "|" not in line:
+                continue
+            adapter_name, ip = [part.strip() for part in line.split("|", 1)]
+            if usable_lan_ip(ip):
+                candidates.append((score_candidate(adapter_name, ip, True), ip))
+        if candidates:
+            candidates.sort(reverse=True)
+            if candidates[0][0] > -100:
+                return candidates[0][1]
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    try:
+        output = subprocess.check_output(
+            ["ipconfig"],
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+            timeout=3,
+        )
+        candidates = []
+        for block in re.split(r"\n\s*\n", output):
+            lines = [line.strip() for line in block.splitlines() if line.strip()]
+            if not lines:
+                continue
+
+            adapter_name = lines[0].rstrip(":")
+            ipv4_matches = re.findall(r"IPv4[^:\n]*:\s*([0-9]+(?:\.[0-9]+){3})", block)
+            gateway_match = re.search(r"(?:Gateway|网关)[^:\n]*:\s*([0-9]+(?:\.[0-9]+){3})", block)
+            has_gateway = gateway_match is not None
+
+            for ip in ipv4_matches:
+                if usable_lan_ip(ip):
+                    candidates.append((score_candidate(adapter_name, ip, has_gateway), ip))
+
+        if candidates:
+            candidates.sort(reverse=True)
+            return candidates[0][1]
+    except (OSError, subprocess.SubprocessError):
+        pass
+
     try:
         hostname = socket.gethostname()
         candidates = socket.getaddrinfo(hostname, None, socket.AF_INET)
         for item in candidates:
             ip = item[4][0]
-            if not ip.startswith("127."):
+            if usable_lan_ip(ip):
                 return ip
     except OSError:
         pass
